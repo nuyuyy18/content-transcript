@@ -19,6 +19,34 @@ import { extractQuranReference, extractHadithReference, CONTENT_TYPES } from './
 import { verifyQuranSegment } from './quran.js';
 import { verifyHadithSegment } from './hadith.js';
 import logger from '../utils/logger.js';
+import OpenAI from 'openai';
+
+/**
+ * Menerjemahkan teks Latin berbau Arab (Indonesian transliteration) menjadi teks Arab asli (berharakat).
+ */
+async function transliterateToArabic(text) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey || apiKey.startsWith('sk-xxx')) return null;
+
+  try {
+    const openai = new OpenAI({ apiKey });
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an Arabic verification assistant. Convert any Indonesian Latin text that represents Arabic words, prayers, Quran verses, or Hadith into actual Arabic script with harakat (tashkeel). Leave normal Indonesian words as they are, but rewrite the Arabic parts into Arabic. Output ONLY the resulting string without any explanations or quotes.'
+        },
+        { role: 'user', content: text }
+      ],
+      temperature: 0.1,
+    });
+    return response.choices[0].message.content.trim();
+  } catch (error) {
+    logger.error('Failed to transliterate Arabic: ' + error.message);
+    return null;
+  }
+}
 
 /**
  * Verifikasi seluruh konten keagamaan dalam segments
@@ -33,74 +61,80 @@ export async function verifyReligiousContent(segments) {
   let hadithProcessed = 0;
 
   for (const segment of segments) {
+    let processedSegment = null;
+
     switch (segment.type) {
       case CONTENT_TYPES.QURAN: {
-        // Coba ekstrak referensi Al-Qur'an
         const quranRef = extractQuranReference(segment.text);
-        
         if (quranRef) {
-          const verifiedSegment = await verifyQuranSegment(segment, quranRef);
-          verified.push(verifiedSegment);
-          if (verifiedSegment.verification_status === 'verified') {
+          processedSegment = await verifyQuranSegment(segment, quranRef);
+          if (processedSegment.verification_status === 'verified') {
             quranVerified++;
           }
         } else {
-          // Referensi tidak ditemukan — jangan menebak
-          verified.push({
+          processedSegment = {
             ...segment,
             type: CONTENT_TYPES.QURAN,
             verification_status: 'unknown',
             reference_status: 'unknown',
-          });
+          };
         }
         break;
       }
-
       case CONTENT_TYPES.HADITH: {
-        // Coba ekstrak referensi hadis
         const hadithRef = extractHadithReference(segment.text);
-        const verifiedSegment = verifyHadithSegment(segment, hadithRef);
-        verified.push(verifiedSegment);
+        processedSegment = verifyHadithSegment(segment, hadithRef);
         hadithProcessed++;
         break;
       }
-
       case CONTENT_TYPES.ARABIC_TEXT: {
-        // Teks Arab murni — tandai dan pertahankan
-        verified.push({
+        processedSegment = {
           ...segment,
           type: CONTENT_TYPES.ARABIC_TEXT,
           verification_status: 'unverified',
           note: 'Arabic text detected from STT — not verified against trusted source',
-        });
+        };
         break;
       }
-
       case CONTENT_TYPES.DOA:
       case CONTENT_TYPES.DZIKIR: {
-        verified.push({
+        processedSegment = {
           ...segment,
           verification_status: 'unverified',
           note: 'Doa/dzikir detected — preserved as spoken',
-        });
+        };
         break;
       }
-
       case CONTENT_TYPES.RELIGIOUS_SPEECH: {
-        // Ucapan keagamaan biasa (mengandung istilah Arab tapi bukan ayat/hadis)
-        verified.push({
+        processedSegment = {
           ...segment,
           verification_status: null,
-        });
+        };
         break;
       }
-
       default: {
-        // Konten umum (speech) — tidak perlu verifikasi
-        verified.push(segment);
+        processedSegment = { ...segment };
         break;
       }
     }
+
+    // Terjemahkan lafaz Arab latin ke Arab berharakat jika itu teks keagamaan
+    const religiousTypes = [
+      CONTENT_TYPES.QURAN, CONTENT_TYPES.HADITH, CONTENT_TYPES.DOA, 
+      CONTENT_TYPES.DZIKIR, CONTENT_TYPES.ARABIC_TEXT, CONTENT_TYPES.RELIGIOUS_SPEECH
+    ];
+
+    if (religiousTypes.includes(processedSegment.type)) {
+      const translatedText = await transliterateToArabic(processedSegment.text);
+      if (translatedText && translatedText !== processedSegment.text) {
+        processedSegment.text = translatedText;
+        if (!processedSegment.verification_status || processedSegment.verification_status === 'unverified') {
+          processedSegment.verification_status = 'ai_translated';
+        }
+      }
+    }
+
+    verified.push(processedSegment);
   }
 
   logger.info(`Verification complete: ${quranVerified} Quran verified, ${hadithProcessed} hadith processed`);
@@ -123,40 +157,24 @@ export function assembleTranscript(segments) {
       text: segment.text,
     };
 
-    // Tambahkan info confidence jika ada
     if (segment.confidence != null) {
       assembled.transcription_confidence = segment.confidence;
     }
 
-    // Tambahkan referensi Al-Qur'an jika ada dan terverifikasi
     if (segment.type === 'quran' && segment.reference) {
       assembled.reference = segment.reference;
       assembled.verification_status = segment.verification_status;
-
-      // Jika ada teks terverifikasi, sertakan
-      if (segment.verified_arabic_text) {
-        assembled.verified_arabic_text = segment.verified_arabic_text;
-      }
-      if (segment.verified_translation) {
-        assembled.verified_translation = segment.verified_translation;
-      }
-      if (segment.verification_source) {
-        assembled.verification_source = segment.verification_source;
-      }
+      if (segment.verified_arabic_text) assembled.verified_arabic_text = segment.verified_arabic_text;
+      if (segment.verified_translation) assembled.verified_translation = segment.verified_translation;
+      if (segment.verification_source) assembled.verification_source = segment.verification_source;
     }
 
-    // Tambahkan referensi hadis jika ada
     if (segment.type === 'hadith') {
-      if (segment.reference) {
-        assembled.reference = segment.reference;
-      }
+      if (segment.reference) assembled.reference = segment.reference;
       assembled.verification_status = segment.verification_status;
-      if (segment.narrator) {
-        assembled.narrator = segment.narrator;
-      }
+      if (segment.narrator) assembled.narrator = segment.narrator;
     }
 
-    // Tambahkan status verifikasi untuk konten keagamaan lainnya
     if (['arabic_text', 'doa', 'dzikir'].includes(segment.type)) {
       assembled.verification_status = segment.verification_status || 'unverified';
     }
