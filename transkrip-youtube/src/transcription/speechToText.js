@@ -51,6 +51,7 @@ export async function transcribeAudio(audioPath, language = null) {
       model: 'whisper-1',
       response_format: 'verbose_json', // Untuk mendapatkan timestamps
       timestamp_granularities: ['segment'],
+      prompt: 'Transkripsikan dengan akurat. Jika terdapat ayat Al-Qur\'an, hadis, doa, ucapan salam, atau kata-kata berbahasa Arab, WAJIB tuliskan langsung menggunakan teks Arab asli berharakat (bukan huruf Latin).',
     };
 
     // Jika bahasa diketahui, set secara eksplisit untuk akurasi yang lebih baik
