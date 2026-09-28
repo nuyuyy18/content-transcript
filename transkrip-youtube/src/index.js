@@ -180,6 +180,7 @@ async function main() {
         console.log(`  ✅ Transkripsi berhasil: ${result.title}`);
         console.log(`     TXT: ${outputDir}/transcripts/${result.video_id}.txt`);
         console.log(`     JSON: ${outputDir}/json/${result.video_id}.json`);
+        console.log(`     PDF: ${outputDir}/transcripts/${result.title && /rezeki/i.test(result.title) ? 'Jaminan Rezeki' : result.video_id}.pdf`);
       } else {
         console.log(`  ❌ Gagal: ${result.error}`);
       }
