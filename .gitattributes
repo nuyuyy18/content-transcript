@@ -1,0 +1,23 @@
+# Set default behavior to automatically handle line endings
+* text=auto eol=lf
+
+# Explicitly declare text files you want to always be normalized and converted to LF on checkin
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.env* text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# Denote all binary files that should not have their line endings modified
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.mp3 binary
+*.mp4 binary
+*.wav binary
