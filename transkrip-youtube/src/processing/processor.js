@@ -20,7 +20,6 @@ import { withRetry } from './retry.js';
 import DuplicateHandler from './duplicate.js';
 import ProcessingQueue from './queue.js';
 import { saveJSON } from '../output/json.js';
-import { saveTXT } from '../output/txt.js';
 import { savePDF } from '../output/pdf.js';
 import { appendCSV, initCSV } from '../output/csv.js';
 import logger from '../utils/logger.js';
@@ -137,7 +136,6 @@ export async function processVideo(url, options = {}) {
 
     // 12. Save outputs
     await saveJSON(result, outputDir);
-    await saveTXT(result, outputDir);
     await savePDF(result, outputDir);
 
     // 13. Mark as processed
