@@ -19,9 +19,7 @@ import { verifyReligiousContent, assembleTranscript } from '../religious/verifie
 import { withRetry } from './retry.js';
 import DuplicateHandler from './duplicate.js';
 import ProcessingQueue from './queue.js';
-import { saveJSON } from '../output/json.js';
 import { savePDF } from '../output/pdf.js';
-import { appendCSV, initCSV } from '../output/csv.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -135,7 +133,6 @@ export async function processVideo(url, options = {}) {
     };
 
     // 12. Save outputs
-    await saveJSON(result, outputDir);
     await savePDF(result, outputDir);
 
     // 13. Mark as processed
@@ -181,31 +178,22 @@ export async function processVideos(urls, options = {}) {
   // Deduplicate
   const { toProcess, duplicates, alreadyProcessed } = duplicateHandler.deduplicate(valid);
 
-  // Inisialisasi CSV
-  await initCSV(outputDir);
-
   // Setup queue
   const queue = new ProcessingQueue(1);
 
   // Proses semua video
   const results = await queue.processAll(toProcess, async (item) => {
     const result = await processVideo(item.url, { outputDir, duplicateHandler });
-    
-    // Append ke CSV
-    await appendCSV(result, outputDir);
-    
     return result;
   });
 
   // Tambahkan invalid URLs ke hasil
   for (const inv of invalid) {
-    const failedResult = {
+    results.push({
       url: inv.url,
       status: 'failed',
       error: inv.error,
-    };
-    results.push(failedResult);
-    await appendCSV(failedResult, outputDir);
+    });
   }
 
   // Tambahkan duplicates ke hasil

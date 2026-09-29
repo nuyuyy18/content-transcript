@@ -3,7 +3,7 @@
  * Mengonversi dan merender hasil transkrip menjadi dokumen PDF berkualitas tinggi
  * dengan dukungan tipografi Arab berharakat (tashkeel), timestamp, dan kategori teks agama.
  * 
- * Output path: {outputDir}/transcripts/{filename}.pdf
+ * Output path: {outputDir}/{filename}.pdf
  */
 
 import { writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
@@ -409,8 +409,8 @@ function generateHtmlTemplate(result, themeTitle) {
  * @returns {Promise<string>} Path to generated PDF
  */
 export async function savePDF(result, outputDir = 'result', options = {}) {
-  const pdfDir = join(outputDir, 'transcripts');
-  
+  const pdfDir = outputDir;
+
   if (!existsSync(pdfDir)) {
     mkdirSync(pdfDir, { recursive: true });
   }

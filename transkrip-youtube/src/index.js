@@ -108,9 +108,7 @@ Options:
 
 Output:
   result/
-  ├── transcripts/      File PDF
-  ├── json/             File .json (machine-readable)
-  └── results.csv       Ringkasan batch
+  └── *.pdf             File PDF transkrip
 
 Environment Variables (.env):
   OPENAI_API_KEY        API key OpenAI (untuk Whisper STT)
@@ -178,8 +176,7 @@ async function main() {
       console.log('');
       if (result.status === 'completed') {
         console.log(`  ✅ Transkripsi berhasil: ${result.title}`);
-        console.log(`     JSON: ${outputDir}/json/${result.video_id}.json`);
-        console.log(`     PDF: ${outputDir}/transcripts/${result.title && /rezeki/i.test(result.title) ? 'Jaminan Rezeki' : result.video_id}.pdf`);
+        console.log(`     PDF: ${outputDir}/${result.title && /rezeki/i.test(result.title) ? 'Jaminan Rezeki' : result.video_id}.pdf`);
       } else {
         console.log(`  ❌ Gagal: ${result.error}`);
       }
@@ -198,7 +195,7 @@ async function main() {
       console.log(`  ║  Skipped:   ${String(summary.skipped).padStart(5)}  ⏭              ║`);
       console.log('  ╚════════════════════════════════════╝');
       console.log('');
-      console.log(`  📁 Results: ${outputDir}/results.csv`);
+      console.log(`  📁 Output: ${outputDir}/`);
     }
   } catch (error) {
     logger.error(`Fatal error: ${error.message}`);
