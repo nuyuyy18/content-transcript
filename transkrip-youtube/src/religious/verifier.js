@@ -72,11 +72,12 @@ export async function verifyReligiousContent(segments) {
             quranVerified++;
           }
         } else {
+          // Jika di video tidak dicantumkan ayat berapa dan surah apa, tidak perlu diberi keterangan quran
           processedSegment = {
             ...segment,
-            type: CONTENT_TYPES.QURAN,
-            verification_status: 'unknown',
-            reference_status: 'unknown',
+            type: CONTENT_TYPES.SPEECH,
+            verification_status: null,
+            reference_status: null,
           };
         }
         break;
