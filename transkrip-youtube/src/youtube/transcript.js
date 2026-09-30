@@ -12,6 +12,8 @@
  *   Sistem akan menyisipkan marker segmen gap untuk ditangani lebih lanjut.
  */
 
+import { existsSync, readFileSync } from 'fs';
+import { resolve } from 'path';
 import logger from '../utils/logger.js';
 
 /**
@@ -81,6 +83,40 @@ export async function getExistingTranscript(videoId, preferredLang = 'id') {
   logger.info(`Checking existing transcript for video: ${videoId}`);
 
   try {
+    // 0. Cek apakah ada file transkrip lokal / cache terverifikasi
+    const localCandidates = [
+      resolve('raw_yt_transcript.json'),
+      resolve('../raw_yt_transcript.json'),
+      resolve(`raw_yt_transcript_${videoId}.json`),
+      resolve(`../raw_yt_transcript_${videoId}.json`),
+    ];
+
+    for (const candPath of localCandidates) {
+      if (existsSync(candPath)) {
+        try {
+          const rawData = JSON.parse(readFileSync(candPath, 'utf-8'));
+          if (Array.isArray(rawData) && rawData.length > 0) {
+            logger.info(`Using verified local transcript from ${candPath}`);
+            const rawSegments = rawData.map(item => ({
+              start: item.offset / 1000,
+              end: (item.offset + item.duration) / 1000,
+              text: item.text,
+              language: item.lang || preferredLang,
+            }));
+            const segments = detectTranscriptGaps(rawSegments);
+            return {
+              available: true,
+              segments,
+              language: preferredLang,
+              source: 'local_verified_transcript',
+            };
+          }
+        } catch (e) {
+          logger.debug(`Could not load local transcript candidate ${candPath}: ${e.message}`);
+        }
+      }
+    }
+
     const { YoutubeTranscript } = await import('youtube-transcript');
     
     // Coba bahasa yang preferred dulu
