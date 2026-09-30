@@ -30,6 +30,15 @@ const QURAN_INDICATORS = [
   /firman\s+allah/i,
   /dalam\s+(?:al-?qur'?an|kitabullah)/i,
   /ayat\s+(?:ini|tersebut|di\s+atas|berikut)/i,
+
+  // Transliterasi Latin dari ayat Al-Qur'an yang sering disebut dalam ceramah
+  /innallaha\s+(?:huar?|huwa)\s*r?razzaq/i,             // Az-Zariyat 58
+  /wama\s+khalaqtul?\s+jinn[ie]?\s+wal\s*ins/i,         // Az-Zariyat 56
+  /inna\s+ma'?a\s+al'?usri\s+yusra/i,                   // Al-Insyirah 5-6
+  /fa'?inna\s+ma'?a\s+al'?usri\s+yusra/i,              // Al-Insyirah 5
+  /tawakkal'?tu\s+'?ala\s+allah/i,                      // Doa tawakal
+  /wa\s*ma\s+min\s+dabbatin/i,                          // Hud 6
+  /wa\s*fi\s*s\s*sama'?i\s+rizq/i,                      // Az-Zariyat 22
 ];
 
 /**
@@ -45,6 +54,13 @@ const HADITH_INDICATORS = [
   /sallallahu\s+'?alaihi\s+wa\s+sallam/i,
   /shallallahu\s+'?alaihi\s+wa\s+sallam/i,
   /ﷺ/,
+
+  // Transliterasi Latin dari ucapan keagamaan yang sering disebut dalam ceramah
+  /wailun?\s+li\s*(?:bni|ibni|ibn)\s+adam/i,            // "Wailun libni Adam" (peringatan)
+  /bal\s+hua\s+a'?kal\s+(?:ar?)?rizq/i,                 // Ucapan Hatim Al-Aswam
+  /isytafi\s+(?:hazan|huznan)/i,                         // Transliterasi Arab dari sajak Al Haddad
+  /(?:wa\s+)?(?:in|inn)\s+(?:tarda|tardu|tardha)\s+bil?\s*maqsum/i, // Sajak Al Haddad (ridha)
+  /(?:wa\s+)?(?:in|inn)\s+lam\s+ta?kun\s+(?:tarda|tardu)/i,         // Sajak Al Haddad (lanjutan)
 ];
 
 /**
@@ -71,6 +87,7 @@ const CONTENT_TYPES = {
   DZIKIR: 'dzikir',
   ARABIC_TEXT: 'arabic_text',
   RELIGIOUS_SPEECH: 'religious_speech',
+  GAP: 'gap',
   SPEECH: 'speech',
 };
 
@@ -83,6 +100,16 @@ export function detectReligiousSegment(segment) {
   const { text } = segment;
   
   if (!text) return { ...segment, type: CONTENT_TYPES.SPEECH };
+
+  // Segmen gap yang disisipkan oleh detectTranscriptGaps — pertahankan tipe gap
+  if (segment.type === CONTENT_TYPES.GAP) {
+    return {
+      ...segment,
+      type: CONTENT_TYPES.GAP,
+      religious_flags: ['transcript_gap'],
+      note: 'Konten tidak tertranskrip oleh YouTube caption — kemungkinan teks Arab/keagamaan',
+    };
+  }
 
   // Cek teks Arab murni
   if (isMostlyArabic(text)) {

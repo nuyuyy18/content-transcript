@@ -129,6 +129,9 @@ function generateHtmlTemplate(result, themeTitle) {
         tagLabel = '<span class="tag tag-doa">Doa</span>';
       } else if (segment.type === 'arabic_text') {
         tagLabel = '<span class="tag tag-ar">AR</span>';
+      } else if (segment.type === 'gap') {
+        hlClass = 'highlight-gap';
+        tagLabel = '<span class="tag tag-gap">GAP</span>';
       }
 
       const verifHtml = segment.verification_status === 'verified'
@@ -137,8 +140,18 @@ function generateHtmlTemplate(result, themeTitle) {
 
       let bodyHtml = '';
 
+      // Untuk segment gap: tampilkan peringatan konten tidak tertranskrip
+      if (segment.type === 'gap') {
+        const gapSec = segment.gap_duration ? `${segment.gap_duration.toFixed(1)}s` : '?s';
+        bodyHtml = `<div class="gap-warning">` +
+          `<span class="gap-icon">⚠️</span> ` +
+          `<strong>[PERLU VERIFIKASI MANUAL]</strong> ` +
+          `Jeda ${gapSec} tidak tertranskrip oleh YouTube caption. ` +
+          `Kemungkinan terdapat bacaan Arab/keagamaan (ayat, hadis, doa, atau kutipan) ` +
+          `yang tidak terdeteksi. Silakan cek audio pada timestamp ini.` +
+          `</div>`;
       // Untuk segment Quran terverifikasi: tampilkan teks Arab dari API
-      if (segment.type === 'quran' && segment.verified_arabic_text) {
+      } else if (segment.type === 'quran' && segment.verified_arabic_text) {
         bodyHtml += `<div class="arabic-standalone"><bdi dir="rtl" class="arabic-text">${escapeHtml(segment.verified_arabic_text)}</bdi></div>`;
         if (segment.verified_translation) {
           bodyHtml += `<div class="translation-text">${escapeHtml(segment.verified_translation)}</div>`;
@@ -314,6 +327,12 @@ function generateHtmlTemplate(result, themeTitle) {
       border-color: #e9d5ff;
     }
 
+    .segment.highlight-gap {
+      background: #fff7ed;
+      border-color: #fed7aa;
+      border-style: dashed;
+    }
+
     .segment-sidebar {
       flex-shrink: 0;
       width: 90px;
@@ -347,6 +366,7 @@ function generateHtmlTemplate(result, themeTitle) {
     .tag-quran { background: #dcfce7; color: #166534; }
     .tag-hadith { background: #fef9c3; color: #854d0e; }
     .tag-doa { background: #f3e8ff; color: #6b21a8; }
+    .tag-gap { background: #ffedd5; color: #c2410c; }
 
     .verif-badge {
       font-size: 6.5pt;
@@ -405,6 +425,20 @@ function generateHtmlTemplate(result, themeTitle) {
       margin-top: 3px;
       padding-top: 2px;
       border-top: 1px dashed #e2e8f0;
+    }
+
+    .gap-warning {
+      font-size: 8pt;
+      color: #92400e;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-style: italic;
+    }
+
+    .gap-icon {
+      margin-right: 3px;
     }
 
     .footer-note {

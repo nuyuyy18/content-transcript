@@ -112,6 +112,17 @@ export async function verifyReligiousContent(segments) {
         };
         break;
       }
+      case CONTENT_TYPES.GAP: {
+        // Segmen gap: konten tidak tertranskrip oleh YouTube caption
+        // Tandai dengan needs_verification agar bisa ditangani secara manual
+        processedSegment = {
+          ...segment,
+          type: CONTENT_TYPES.GAP,
+          verification_status: 'needs_verification',
+          note: segment.note || 'Konten tidak tertranskrip — kemungkinan teks Arab/keagamaan yang diucapkan selama jeda caption',
+        };
+        break;
+      }
       default: {
         processedSegment = { ...segment };
         break;
@@ -119,6 +130,7 @@ export async function verifyReligiousContent(segments) {
     }
 
     // Terjemahkan lafaz Arab latin ke Arab berharakat jika itu teks keagamaan
+    // GAP segment tidak perlu diterjemahkan karena tidak ada teks asli
     const religiousTypes = [
       CONTENT_TYPES.QURAN, CONTENT_TYPES.HADITH, CONTENT_TYPES.DOA, 
       CONTENT_TYPES.DZIKIR, CONTENT_TYPES.ARABIC_TEXT, CONTENT_TYPES.RELIGIOUS_SPEECH
@@ -177,6 +189,13 @@ export function assembleTranscript(segments) {
 
     if (['arabic_text', 'doa', 'dzikir'].includes(segment.type)) {
       assembled.verification_status = segment.verification_status || 'unverified';
+    }
+
+    if (segment.type === 'gap') {
+      assembled.verification_status = 'needs_verification';
+      assembled.gap_duration = segment.gap_duration;
+      assembled.gap_reason = segment.gap_reason;
+      if (segment.note) assembled.note = segment.note;
     }
 
     return assembled;

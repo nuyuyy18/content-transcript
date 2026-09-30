@@ -75,6 +75,12 @@ export function cleanTranscript(segments) {
   const cleaned = [];
   
   for (const segment of segments) {
+    // Segmen gap tidak boleh dibersihkan — marker-nya harus dipertahankan utuh
+    if (segment.type === 'gap') {
+      cleaned.push({ ...segment });
+      continue;
+    }
+
     const cleanedText = cleanText(segment.text);
     
     // Skip segment kosong setelah cleaning
@@ -115,8 +121,8 @@ function mergeShortSegments(segments, minLength = 10) {
     }
 
     // Jika buffer terlalu pendek dan bahasa sama, merge
-    // Tapi JANGAN merge segment keagamaan dengan apapun
-    const isReligious = (seg) => ['quran','hadith','doa','dzikir','arabic_text','religious_speech'].includes(seg.type);
+    // Tapi JANGAN merge segment keagamaan atau gap dengan apapun
+    const isReligious = (seg) => ['quran','hadith','doa','dzikir','arabic_text','religious_speech','gap'].includes(seg.type);
     if (buffer.text.length < minLength && buffer.language === segment.language
         && !isReligious(buffer) && !isReligious(segment)) {
       buffer.text = `${buffer.text} ${segment.text}`;
