@@ -53,7 +53,10 @@ export function cleanText(text) {
   // 5. Hapus duplikasi kata berturut-turut yang jelas error STT
   // Contoh: "yang yang yang" → "yang"
   // Hanya jika 3x atau lebih berturut-turut (2x bisa disengaja)
-  cleaned = cleaned.replace(/\b(\w+)(?:\s+\1){2,}\b/gi, '$1');
+  // Hanya berlaku untuk kata Latin (tidak menyentuh teks Arab)
+  if (!/[\u0600-\u06FF]/.test(cleaned)) {
+    cleaned = cleaned.replace(/\b([A-Za-z]+)(?:\s+\1){2,}\b/gi, '$1');
+  }
 
   // 6. Trim
   cleaned = cleaned.trim();
@@ -112,7 +115,10 @@ function mergeShortSegments(segments, minLength = 10) {
     }
 
     // Jika buffer terlalu pendek dan bahasa sama, merge
-    if (buffer.text.length < minLength && buffer.language === segment.language) {
+    // Tapi JANGAN merge segment keagamaan dengan apapun
+    const isReligious = (seg) => ['quran','hadith','doa','dzikir','arabic_text','religious_speech'].includes(seg.type);
+    if (buffer.text.length < minLength && buffer.language === segment.language
+        && !isReligious(buffer) && !isReligious(segment)) {
       buffer.text = `${buffer.text} ${segment.text}`;
       buffer.end = segment.end;
       if (segment.confidence && buffer.confidence) {

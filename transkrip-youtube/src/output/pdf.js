@@ -135,7 +135,26 @@ function generateHtmlTemplate(result, themeTitle) {
         ? `<span class="verif-badge" title="Verified">✓</span>`
         : '';
 
-      const bodyHtml = formatSegmentText(segment.text);
+      let bodyHtml = '';
+
+      // Untuk segment Quran terverifikasi: tampilkan teks Arab dari API
+      if (segment.type === 'quran' && segment.verified_arabic_text) {
+        bodyHtml += `<div class="arabic-standalone"><bdi dir="rtl" class="arabic-text">${escapeHtml(segment.verified_arabic_text)}</bdi></div>`;
+        if (segment.verified_translation) {
+          bodyHtml += `<div class="translation-text">${escapeHtml(segment.verified_translation)}</div>`;
+        }
+        if (segment.reference) {
+          const ref = segment.reference;
+          const refStr = ref.surah ? `${ref.surah} : ${ref.ayah}` : '';
+          if (refStr) bodyHtml += `<div class="ref-text">${escapeHtml(refStr)}</div>`;
+        }
+        // Teks STT sebagai catatan konteks
+        if (segment.text) {
+          bodyHtml += `<div class="stt-note">${escapeHtml(segment.text)}</div>`;
+        }
+      } else {
+        bodyHtml = formatSegmentText(segment.text);
+      }
 
       segmentsHtml += `
         <div class="segment ${hlClass}">
@@ -360,6 +379,32 @@ function generateHtmlTemplate(result, themeTitle) {
       border-radius: 4px;
       margin: 2px 0;
       text-align: right;
+    }
+
+    .translation-text {
+      font-size: 8pt;
+      color: #065f46;
+      font-style: italic;
+      margin: 3px 0 2px 0;
+      padding-left: 4px;
+      border-left: 2px solid #6ee7b7;
+    }
+
+    .ref-text {
+      font-size: 7.5pt;
+      font-weight: 700;
+      color: #059669;
+      margin: 2px 0 1px 0;
+      letter-spacing: 0.2px;
+    }
+
+    .stt-note {
+      font-size: 7pt;
+      color: #94a3b8;
+      font-style: italic;
+      margin-top: 3px;
+      padding-top: 2px;
+      border-top: 1px dashed #e2e8f0;
     }
 
     .footer-note {
